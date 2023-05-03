@@ -1,45 +1,75 @@
-# Mac Response
-# Trying to fix the pile of crap Mac OS, one script at a time.
+#!/usr/bin/env python
 
-# !/usr/bin/env python
+import socket
+import logging
+import hashlib
+import getpass
 
+# Define the expected firewall settings
+EXPECTED_FIREWALL_SETTINGS = {
+    "Block all incoming connections": True,
+    "Automatically allow signed software to receive incoming connections": True,
+    "Automatically allow built-in software to receive incoming connections": True,
+    "Enable stealth mode": True
+}
 
-import os
-import subprocess
-import time
+# Set up logging
+logging.basicConfig(filename='/var/log/firewall_check.log', level=logging.INFO,
+                    format='%(asctime)s %(levelname)s %(message)s')
 
-# Define the path to the plist file
-PLIST_PATH = '/Library/LaunchAgents/com.example.firewall_check.plist'
+# Set up password protection
+password = 'mysecretpassword'
+hashed_password = hashlib.sha3_512(password.encode('utf-8')).hexdigest()
 
-# Define the command to run when the firewall settings change
-COMMAND = ['/usr/bin/logger', '-s', 'Firewall settings have been changed']
-
-# Check the current firewall settings
+# Check the firewall settings
 def check_firewall_settings():
-    # Add your firewall settings check code here
-    pass
+    settings = {}
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(1)
+        try:
+            s.connect(('localhost', 0))
+            s.close()
+            settings["Block all incoming connections"] = False
+        except socket.error:
+            settings["Block all incoming connections"] = True
 
-# Run the command when the firewall settings change
-def run_command():
-    subprocess.run(COMMAND)
+    settings["Automatically allow signed software to receive incoming connections"] = \
+        socket.getdefaulttimeout() is None
 
-# Monitor the firewall settings for changes
-def monitor_firewall_settings():
-    # Get the modification time of the plist file
-    last_modification_time = os.path.getmtime(PLIST_PATH)
-    
-    # Loop indefinitely, checking the modification time of the plist file
+    settings["Automatically allow built-in software to receive incoming connections"] = \
+        socket.gethostbyname('localhost') == '127.0.0.1'
+
+    settings["Enable stealth mode"] = \
+        socket.getservbyname('ipp', 'tcp') is None
+
+    # Log the firewall settings and compare them to the expected settings
+    logging.info('Current firewall settings:')
+    for setting, value in settings.items():
+        logging.info(f'{setting}: {value}')
+        if value != EXPECTED_FIREWALL_SETTINGS[setting]:
+            logging.warning(f'Firewall setting {setting} is {value}, expected {EXPECTED_FIREWALL_SETTINGS[setting]}')
+
+    # Prompt for password to allow changes to the script or to kill the process
     while True:
-        current_modification_time = os.path.getmtime(PLIST_PATH)
-        if current_modification_time > last_modification_time:
-            # The plist file has been modified, so run the command
-            run_command()
-            check_firewall_settings()
-            # Update the modification time
-            last_modification_time = current_modification_time
-        
-        # Wait for a short period before checking again
-        time.sleep(1)
+        command = input('Enter command (change/kill): ')
+        if command == 'change':
+            entered_password = getpass.getpass('Enter password: ')
+            if hashed_password == hashlib.sha3_512(entered_password.encode('utf-8')).hexdigest():
+                print('Password correct, making changes...')
+                # add code to make changes to the firewall settings
+                break
+            else:
+                print('Password incorrect, try again.')
+        elif command == 'kill':
+            entered_password = getpass.getpass('Enter password: ')
+            if hashed_password == hashlib.sha3_512(entered_password.encode('utf-8')).hexdigest():
+                print('Password correct, exiting...')
+                break
+            else:
+                print('Password incorrect, try again.')
+        else:
+            print('Invalid command, try again.')
 
+# Check the firewall settings when the script is run
 if __name__ == '__main__':
-    monitor_firewall_settings()
+    check_firewall_settings()
