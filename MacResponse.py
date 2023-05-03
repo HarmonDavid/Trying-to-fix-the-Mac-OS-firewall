@@ -1,4 +1,11 @@
+# Mac Response:
 #!/usr/bin/env python
+# This exists, because my Mac has that firewall issue, where the settings change on their own.
+# I will be focussing on security stuff for a few months, because that is the field I am coming from.
+# In order for this to work properyly, you need to create .plist script as this is intended to be event driven.
+# I am looking to build a more modern way to do this, but I am not sure how to do it yet. I am new to Mac OS and Python.
+# Feel free to add advice or questions. If you know more about this subject than myself, feel free to contact me.
+
 
 import socket
 import logging
@@ -8,8 +15,8 @@ import getpass
 # Define the expected firewall settings
 EXPECTED_FIREWALL_SETTINGS = {
     "Block all incoming connections": True,
-    "Automatically allow signed software to receive incoming connections": True,
-    "Automatically allow built-in software to receive incoming connections": True,
+    "Automatically allow signed software to receive incoming connections": False,
+    "Automatically allow built-in software to receive incoming connections": False,
     "Enable stealth mode": True
 }
 
